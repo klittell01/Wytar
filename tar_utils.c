@@ -82,12 +82,15 @@ int tStatFile(struct t_header * header, const char * filename){
     strcat(mode, ((fileStat.st_mode & S_IWOTH) ? "w" : "-"));
     strcat(mode, ((fileStat.st_mode & S_IXOTH) ? "x" : "-"));
 
+    // put name and mode in header
     strcpy(header -> name, filename);
     strcpy(header -> mode, mode);
 
-    uid_t uid;
-    gid_t grid;
-
+    unsigned int  timeInt = fileStat.st_mtime;
+    char mTimebuf[12];
+    sprintf(mTimebuf, "%u", timeInt);
+    strcpy(header -> mtime, mTimebuf);
+    // get uid and save to header
     struct passwd pwd;
     struct passwd *result;
     char *buf;
@@ -98,6 +101,8 @@ int tStatFile(struct t_header * header, const char * filename){
     sprintf(uidBuff, "%ld", (long)pwd.pw_uid);
     strcpy(header -> uid, uidBuff);
 
+    // get gid and save to header
+    gid_t grid;
     char gidBuff[32];
     grid = fileStat.st_gid;
     struct group *gr;
@@ -110,18 +115,29 @@ int tStatFile(struct t_header * header, const char * filename){
     free(gr);
     free(buf);
 
-    printf("data check: %s\n", header -> gid);
-    //strcpy( header -> mode[0], (fileStat.st_mode & S_IRUSR) ? "r" : "-");
-    /*
-    printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
-    printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
-    printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
-    */
+    // get file type and save to header
+    if(S_ISDIR(fileStat.st_mode) != 0){
+        // directory
+        header -> typeflag = DIRTYPE;
+
+        // put size in the header
+        int mySize = fileStat.st_size;
+        char sizeBuf[12];
+        sprintf(sizeBuf, "%d", mySize);
+    } else if(S_ISLNK(fileStat.st_mode) != 0) {
+        // link so we dont put a size just leave as zeros
+        header -> typeflag = SYMTYPE;
+    } else {
+        // not a dir or link
+        header -> typeflag = REGTYPE;
+
+        // put size in the header
+        int mySize = fileStat.st_size;
+        char sizeBuf[12];
+        sprintf(sizeBuf, "%d", mySize);
+    }
+    printf("data test: %s\n", header -> mode);
+    // TODO: compute checksum here
 
     return 0;
 }

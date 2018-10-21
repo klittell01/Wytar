@@ -1,3 +1,22 @@
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include <dirent.h>
+#include <fcntl.h>
+#include <grp.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <tar.h>
+
+
+
 struct t_header {               // byte offset //
     char name[100];             // 0
     char mode[8];               // 100
