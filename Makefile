@@ -12,8 +12,15 @@ RM=/bin/rm -f
 
 .PHONEY: clean
 
-wytar: wytar.c
-	${CC} ${CFLAGS} -o wytar wytar.c -lm
+wytar: main.o tar_utils.o
+	${CC} ${CFLAGS} -o wytar wytar.c tar_utils.o -lm
+
+tar_utils.o: tar_utils.c
+	${CC} ${CFLAGS} -c tar_utils.c
+
+main.o: wytar.c
+	${CC} ${CFLAGS} -c tar_utils.c
+
 
 clean:
-	${RM} wytar
+	${RM} wytar tar_utils.o
