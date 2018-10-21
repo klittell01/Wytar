@@ -1,0 +1,7 @@
+// Kevin littell
+// homework6
+// COSC 3750
+// 10-19-2018
+// psudeo code for a tar replacement
+
+
