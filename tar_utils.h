@@ -5,7 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <dirent.h>
+//#include <dirent.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <sys/select.h>
@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <tar.h>
+//#include <dirent.h>
 
 
 
@@ -41,7 +42,7 @@ int tArchive(const int fd, struct t_header ** arc,
     const int fc, const char * files[]);
 
 
-int tWrite(const int fd, struct t_header ** arc,
+int tWrite(const int fd, struct t_header ** myTar, struct t_header ** arc,
     const int fc, const char * files[]);
 
 int tWriteEnd(const int fd, int offset);
