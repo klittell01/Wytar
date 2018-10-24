@@ -49,6 +49,9 @@ int tArchive(FILE * fd, struct t_header ** arc,
 int tWrite(FILE * fd, struct t_header ** myTar, struct t_header ** arc,
     const int fc, const char * files[]);
 
-int tWriteEnd(FILE * fd, int offset);
+int tOpen(FILE * fd, struct t_header ** arc,
+    const int fc, const char * files[]);
+
+int tWriteEnd(FILE * fd);
 
 int tStatFile(struct t_header * header, const char * filename);

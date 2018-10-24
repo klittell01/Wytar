@@ -64,7 +64,7 @@ int main (int argc, char * argv[]){
     const char ** files = (const char **) &argv[4];
     FILE * fd;
     if (create){
-        fd = fopen(arcName, "w");
+        fd = fopen(arcName, "wb");
         if (fd == NULL){
             printf("fopen failed, errno = %d\n", errno);
             return -1;
@@ -73,6 +73,14 @@ int main (int argc, char * argv[]){
         if(tArchive(fd, &arc, (argc - pos),files) < 0){
             fprintf(stderr, "Error: Failed to write archive\n");
         }
+    } else {
+        fd = fopen(arcName, "rb");
+        if (fd == NULL){
+            printf("fopen failed, errno = %d\n", errno);
+            return -1;
+        }
+        struct t_header * arc = NULL;
+        //if(t)
     }
     return 0;
 }

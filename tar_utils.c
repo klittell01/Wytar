@@ -17,21 +17,28 @@
 
 int tArchive(FILE * fd, struct t_header ** arc,
     const int fc, const char * files[]){
-        struct t_header ** myTar = arc;
-        int rtn1 = tWrite(fd, myTar, arc, fc, files);
-        printf("my return value: %d\n", rtn1 );
-        if(rtn1 < 0){
-            fprintf(stderr, "Error: Failed to write entries\n");
-            return -1;
-        }
-        int offset = 0;
-        int rtn2 = tWriteEnd(fd, offset);
-        if(rtn2 < 0){
-            fprintf(stderr, "Error: Failed to write end blocks\n");
-            return -1;
-        }
-        return 0;
+
+    struct t_header ** myTar = arc;
+    int rtn1 = tWrite(fd, myTar, arc, fc, files);
+    printf("my return value: %d\n", rtn1 );
+    if(rtn1 < 0){
+        fprintf(stderr, "Error: Failed to write entries\n");
+        return -1;
     }
+    int rtn2 = tWriteEnd(fd);
+    if(rtn2 < 0){
+        fprintf(stderr, "Error: Failed to write end blocks\n");
+        return -1;
+    }
+    return 0;
+}
+
+int tOpen(FILE * fd, struct t_header ** arc,
+    const int fc, const char * files[]){
+
+    struct t_header ** myTar = arc;
+    fread((*myTar), sizeof(struct t_header), 1, fd);
+}
 
 int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
     const int fc, const char * files[]){
@@ -47,6 +54,21 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
             return -1;
         }
         // meta data writing part goes here
+        int metaRtn;
+        bool fail = false;
+        //int offset[] = {100,108,116,124,136,148,156,157,
+        //    257,263,265,297,329,337,345,500};
+
+        metaRtn = fwrite((*myTar), sizeof(struct t_header), 1, fd);
+        if(metaRtn < 0){
+            fprintf(stderr, "Error: Failed to write metadata\n");
+            return -1;
+        }
+
+
+        ///////////////////////////////
+        /// if it is a directory //////
+        //////////////////////////////
         if((*myTar) -> typeflag == DIRTYPE){
             int len = strlen((*myTar) -> name);
             char * parent = calloc(len + 1, sizeof(char));
@@ -64,8 +86,6 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
             if (!dp){
                 perror("Error: Cannot read directory");
             }
-            printf("filetype is: %c\n", (*myTar) -> typeflag);
-            printf("directory recognized\n");
 
             struct dirent *ep;
             while ((ep = readdir(dp))){
@@ -87,12 +107,10 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
             }
         closedir(dp);
         } else {
-
-        // TODO: write_size metadata here should always work since it is 512
             if (((*myTar) -> typeflag == REGTYPE) || ((*myTar) -> typeflag == AREGTYPE) ||
             ((*myTar) -> typeflag == SYMTYPE)){
                 // open file to read from
-                FILE *fdR = fopen((*myTar) -> name, "r");
+                FILE *fdR = fopen((*myTar) -> name, "rb");
                 printf("file to read from size: %s\n", (*myTar) -> size);
                 if (fdR == NULL){
                     perror("Error");
@@ -123,15 +141,17 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
                 int j;
                 printf("padding is: %d\n", padding);
                 for (j = 0; j < padding; j++){
-                    int written = 0;
-                    int writeCount;
-                    int rCount = 0;
-                    writeCount = fwrite("\0", 1, 1, fd);
+                    int wC;
+                    wC = fwrite("\0", 1, 1, fd);
                 }
             }
-            printf("my size is %u\n", mySize);
 
-            // return 0;
+            int rtn3 = tWriteEnd(fd);
+            if(rtn3 < 0){
+                printf("Error: writting the two end blocks failed");
+                return -1;
+            }
+            return 0;
         }
     }
 
@@ -139,8 +159,16 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
     return -1;
 }
 
-int tWriteEnd(FILE * fd, int offset){
-    return -1;
+int tWriteEnd(FILE * fd){
+    int j;
+    for (j = 0; j < 1024; j++){
+        int writeCount;
+        writeCount = fwrite("\0", 1, 1, fd);
+        if (writeCount <= 0){
+            return -1;
+        }
+    }
+    return 0;
 }
 
 int tStatFile(struct t_header * header, const char * filename){
@@ -177,10 +205,12 @@ int tStatFile(struct t_header * header, const char * filename){
     strcpy(header -> name, filename);
     strcpy(header -> mode, mode);
 
+    // modified time saved to header
     unsigned int  timeInt = fileStat.st_mtime;
     char mTimebuf[12];
     sprintf(mTimebuf, "%u", timeInt);
     strcpy(header -> mtime, mTimebuf);
+
     // get uid and save to header
     struct passwd pwd;
     struct passwd *result;
