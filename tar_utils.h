@@ -42,13 +42,13 @@ struct t_header {               // byte offset //
     char pad[12];               // 500
 };
 
-int tArchive(const int fd, struct t_header ** arc,
+int tArchive(FILE * fd, struct t_header ** arc,
     const int fc, const char * files[]);
 
 
-int tWrite(const int fd, struct t_header ** myTar, struct t_header ** arc,
+int tWrite(FILE * fd, struct t_header ** myTar, struct t_header ** arc,
     const int fc, const char * files[]);
 
-int tWriteEnd(const int fd, int offset);
+int tWriteEnd(FILE * fd, int offset);
 
 int tStatFile(struct t_header * header, const char * filename);

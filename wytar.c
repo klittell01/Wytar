@@ -62,11 +62,11 @@ int main (int argc, char * argv[]){
     }
 
     const char ** files = (const char **) &argv[4];
-    int fd = -1;
+    FILE * fd;
     if (create){
-        fd = open(arcName, O_CREAT, S_IRWXU);
-        if (fd == -1){
-            perror("Error: Unable to open file");
+        fd = fopen(arcName, "w");
+        if (fd == NULL){
+            printf("fopen failed, errno = %d\n", errno);
             return -1;
         }
         struct t_header * arc = NULL;
