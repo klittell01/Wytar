@@ -16,6 +16,10 @@
 #include <tar.h>
 //#include <dirent.h>
 
+#define REGTYPE '0'                   // regular file
+#define AREGTYPE '\0'                 // regular file
+#define SYMTYPE '2'                   // symbolic link
+#define DIRTYPE '5'
 
 
 struct t_header {               // byte offset //

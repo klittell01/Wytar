@@ -44,7 +44,7 @@ int tWrite(const int fd, struct t_header ** top, struct t_header ** arc,
                 fprintf(stderr, "Error: Failed to stat file\n");
                 return -1;
             }
-            // file writing part here
+            // meta data writing part goes here
             if((*myTar) -> typeflag == DIRTYPE){
                 int len = strlen((*myTar) -> name);
                 char * parent = calloc(len + 1, sizeof(char));
@@ -62,6 +62,7 @@ int tWrite(const int fd, struct t_header ** top, struct t_header ** arc,
                 if (!dp){
                     perror("Error: Cannot read directory");
                 }
+                printf("filetype is: %c\n", (*myTar) -> typeflag);
                 printf("directory recognized\n");
 
                 struct dirent *ep;
@@ -83,40 +84,49 @@ int tWrite(const int fd, struct t_header ** top, struct t_header ** arc,
                     }
                 }
             closedir(dp);
-        } else {
+            } else {
 
             // TODO: write_size metadata here should always work since it is 512
+                if (((*myTar) -> typeflag == REGTYPE) || ((*myTar) -> typeflag == AREGTYPE) ||
+                ((*myTar) -> typeflag == SYMTYPE)){
 
-            if (((*myTar) -> typeflag == REGTYPE) || ((*myTar) -> typeflag == AREGTYPE) ||
-            ((*myTar) -> typeflag == SYMTYPE)){
-
-                // write data to file
-                int fd = open((*myTar) -> name, O_RDONLY);
-                if (fd < 0){
-                    perror("Error");
-                }
-                printf("recognized file type");
-
-                /// this needs to go inside the while loop below but i got to
-                // figure out exactly how
-                int written = 0, writeCount;
-                while (written < 512) &&
-                    (writeCount = write(fd, buff + written, 512 - written)) > 0)){
-                    written += writeCount;
-                }
-
-                int readIn = 0;
-                int rCount = 0;
-                while ((readIn < 512) &&
-                (rCount = read(fd, buff + readIn, 512 - readIn) > 0)){
-                    if (write_size(fd, buf, r) != r){
-                        RC_ERROR(stderr, "Error: Could not write to archive: %s\n", strerror(rc));
+                    // write data to file
+                    FILE *fd = fopen((*myTar) -> name, "r");
+                    if (fd == NULL){
+                        perror("Error");
                     }
+                    printf("i got past open\n");
+                    /// this needs to go inside the while loop below but i got to
+                    // figure out exactly how
+                    int written = 0;
+                    int writeCount;
+                    int readIn = 0;
+                    int rCount = 0;
+                    int tmp = 0;
+                    while ((readIn < 512) &&
+                    (rCount = fread(buff, 1, (*myTar) -> size, fd) > 0)){
+
+                        tmp ++;
+
+                        while (written < 512 &&
+                            (writeCount = write(fd, buff + written, 512 - written)) > 0){
+                            written += writeCount;
+                            if (written != writeCount){
+                                fprintf(stderr, "Error: Failed to write correctly\n");
+                            }
+                        }
+                    }
+                    printf("we looped this many times: %d\n", tmp);
+                    close(fd);
                 }
-                close(f);
+
+                // pad the left over size to fill the block
+                unsigned int mySize = (*myTar) -> size;
+                printf("my size is %u\n", mySize);
+                return 0;
             }
         }
-        return 0;
+        return -1;
     }
 
 int tWriteEnd(const int fd, int offset){
@@ -190,24 +200,22 @@ int tStatFile(struct t_header * header, const char * filename){
     if(S_ISDIR(fileStat.st_mode) != 0){
         // directory
         header -> typeflag = DIRTYPE;
-
-        // put size in the header
-        int mySize = fileStat.st_size;
-        char sizeBuf[12];
-        sprintf(sizeBuf, "%d", mySize);
     } else if(S_ISLNK(fileStat.st_mode) != 0) {
         // link so we dont put a size just leave as zeros
         header -> typeflag = SYMTYPE;
     } else {
         // not a dir or link
         header -> typeflag = REGTYPE;
-
-        // put size in the header
-        int mySize = fileStat.st_size;
-        char sizeBuf[12];
-        sprintf(sizeBuf, "%d", mySize);
     }
-    // TODO: compute checksum here
+
+    // put size in the header
+    int mySize = (int) fileStat.st_size;
+    printf("my first size is: %d\n", mySize);
+    char sizeBuf[12];
+    sprintf(sizeBuf, "%d", mySize);
+    strcpy(header -> size, sizeBuf);
+
+    // TODO: compute checksum here and put in header
     unsigned int checksum = 0;
 
     return 0;
