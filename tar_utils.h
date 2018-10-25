@@ -1,3 +1,11 @@
+/*
+ * tar_utils.h
+ * Author: Kevin Littell
+ * Date: 10-19-2018
+ * COSC 3750, program 5
+ * replacment for the tar utility
+ */
+
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -49,8 +57,8 @@ int tArchive(FILE * fd, struct t_header ** arc,
 int tWrite(FILE * fd, struct t_header ** myTar, struct t_header ** arc,
     const int fc, const char * files[]);
 
-int tOpen(FILE * fd, struct t_header ** arc,
-    const int fc, const char * files[]);
+int tExtract(FILE * fd, struct t_header ** arc,
+    const int fc, const char * files[], const char * tarName);
 
 int tWriteEnd(FILE * fd);
 

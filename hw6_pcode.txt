@@ -5,3 +5,19 @@
 // psudeo code for a tar replacement
 
 
+check for options
+ if it is c 
+   create archive using the filename after option f
+ else if it is x
+   extract archive specified by filename option
+ else
+   options are wrong
+
+archive
+  get data for all files and store as header for each file
+  read data from files into archive
+  pad data and put two blocks of zero bytes
+
+extract
+  get data from archive and write it to files and directories
+

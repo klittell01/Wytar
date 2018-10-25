@@ -21,6 +21,8 @@ tar_utils.o: tar_utils.c
 main.o: wytar.c
 	${CC} ${CFLAGS} -c tar_utils.c
 
+tidy:
+	${RM} tar_utils.o
 
 clean:
 	${RM} wytar tar_utils.o

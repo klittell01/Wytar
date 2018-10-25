@@ -35,24 +35,35 @@ int main (int argc, char * argv[]){
 
     // check options
     if(argc >= 3){
-        if (strcmp(argv[1], "-c") == 0 || strcmp(argv[2], "-c") == 0 ||
-            strcmp(argv[3], "-c") == 0){
+        if (strcmp(argv[1], "-c") == 0){
             create = true;
             pos++;
-        }
-        if (strcmp(argv[1], "-x") == 0 || strcmp(argv[2], "-x") == 0 ||
-            strcmp(argv[3], "-x") == 0 ){
+            if (strcmp(argv[1], "-f") == 0 || strcmp(argv[2], "-f") == 0 ||
+                strcmp(argv[3], "-f") == 0 ){
+                pos++;
+                arcName = argv[pos];
+                pos++;
+            } else {
+                printf("Error: no archive name specified\n");
+            }
+        }else if (strcmp(argv[1], "-x") == 0){
             extract = true;
             pos++;
-        }
-        if (strcmp(argv[1], "-f") == 0 || strcmp(argv[2], "-f") == 0 ||
-            strcmp(argv[3], "-f") == 0 ){
-            pos++;
-            arcName = argv[pos];
-            pos++;
+            if (strcmp(argv[1], "-f") == 0 || strcmp(argv[2], "-f") == 0 ||
+                strcmp(argv[3], "-f") == 0 ){
+                pos++;
+                arcName = argv[pos];
+                pos++;
+            } else {
+                printf("Error: no archive name specified\n");
+            }
         } else {
-            printf("Error: no archive name specified\n");
+            printf("Options werent specified correctly\n");
+            printf("-c or -x, then -f followed by the name of the files\n");
+            printf("to archive or extract");
         }
+
+
     }
     if (create && extract){
         printf("Error: unable to extract and archive at once\n");
@@ -80,6 +91,9 @@ int main (int argc, char * argv[]){
             return -1;
         }
         struct t_header * arc = NULL;
+        tExtract(fd, &arc, (argc - pos),files, argv[3]);
+        //     fprintf(stderr, "Error: Failed to open archive\n");
+        // }
         //if(t)
     }
     return 0;
