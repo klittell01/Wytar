@@ -77,24 +77,25 @@ int main (int argc, char * argv[]){
     if (create){
         fd = fopen(arcName, "wb");
         if (fd == NULL){
-            printf("fopen failed, errno = %d\n", errno);
+            perror("Error:");
             return -1;
         }
         struct t_header * arc = NULL;
         if(tArchive(fd, &arc, (argc - pos),files) < 0){
             fprintf(stderr, "Error: Failed to write archive\n");
         }
+        fclose(fd);
     } else {
         fd = fopen(arcName, "rb");
         if (fd == NULL){
-            printf("fopen failed, errno = %d\n", errno);
+            perror("Error:");
             return -1;
         }
         struct t_header * arc = NULL;
-        tExtract(fd, &arc, (argc - pos),files, argv[3]);
-        //     fprintf(stderr, "Error: Failed to open archive\n");
-        // }
-        //if(t)
+        if(tExtract(fd, &arc, (argc - pos),files, argv[3])){
+            fprintf(stderr, "Error: Failed to open archive\n");
+        }
+        fclose(fd);
     }
     return 0;
 }

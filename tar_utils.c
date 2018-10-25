@@ -26,7 +26,6 @@ int tArchive(FILE * fd, struct t_header ** arc,
 
     struct t_header ** myTar = arc;
     int rtn1 = tWrite(fd, myTar, arc, fc, files);
-    printf("my return value: %d\n", rtn1 );
     if(rtn1 < 0){
         fprintf(stderr, "Error: Failed to write entries\n");
         return -1;
@@ -47,49 +46,27 @@ int tExtract(FILE * fd, struct t_header ** arc,
     char filePath[1024];
     strcpy (filePath, "./");
     strcat(filePath,tarName);
-    int j, k, zeroCount, zBlocks;
     int rtn1 = lstat(filePath, &fileStat);
-    int sizeOfTar = (int) fileStat.st_size;
-    int totalBlocks = sizeOfTar / 512;
-
     if (rtn1 < 0){
         perror("Stat error:");
         return -1;
     }
-    for(j = 0; j <= totalBlocks; j++){
-        zeroCount = 0;
-        char * blockCheck;
-        blockCheck = malloc(512);
-        char readBuff[512];
-        fread(readBuff, 1, 512, fd);
-        memcpy(blockCheck, readBuff, 512);
-        for(k = 0; k < 512; blockCheck++, k++){
-            if (* (char *) blockCheck)
-                break;
-            else
-                zeroCount++;
-        }
-        if(zeroCount == 512){
-            zBlocks++;
-            if(zBlocks == 2){
-                zBlocks = 0;
-            }
-        } else {
-            zBlocks = 0;
-        }
-    }
+
     fseek(fd, 0, SEEK_SET);
     FILE * fdNew;
     struct t_header ** myTar = arc;
-    int bytesRead = 0;
     char buff[512];
-    while (sizeOfTar >= 3376){
+    int sizeOfTar = (int) fileStat.st_size;
+    int totalBlocks = sizeOfTar / 512;
+    int blocksToRead = 0;
+    blocksToRead = totalBlocks;
+    while (blocksToRead > 2){
         *myTar = malloc(sizeof(struct t_header));
         int rd = fread((*myTar), sizeof(struct t_header), 1, fd);
         if(rd < 0){
             perror("Error: reading");
         }
-        bytesRead += 512;
+        blocksToRead--;
         unsigned int mySize = atoi((*myTar) -> size);
         int lastWrite = mySize % 512;
         int eof = ceil(mySize / 512);
@@ -100,7 +77,7 @@ int tExtract(FILE * fd, struct t_header ** arc,
             for(i = 0; i <= eof; i++){
                 if(i < eof){
                     int readCount = fread(buff, 1, 512, fd);
-                    bytesRead += readCount;
+                    blocksToRead--; //decrement the amount we need to still read
                     if(readCount < 0){
                         perror("Error: reading");
                         return -1;
@@ -111,7 +88,7 @@ int tExtract(FILE * fd, struct t_header ** arc,
                     }
                 } else {
                     int readCount = fread(buff, 1, lastWrite, fd);
-                    bytesRead += readCount;
+                    blocksToRead--; //decrement the amount we need to still read
                     if(readCount < 0){
                         perror("Error: reading");
                         return -1;
@@ -121,31 +98,26 @@ int tExtract(FILE * fd, struct t_header ** arc,
                         perror("Error: writing");
                     }
                     int seekRtn = fseek(fd, 512 - lastWrite, SEEK_CUR);
+                    blocksToRead--; //decrement the amount we need to still read
                     if(seekRtn < 0){
                         perror("Error seeking in file");
                         return -1;
                     }
-                    if(i == eof){
-                    }
                 }
             }
-            sizeOfTar -= bytesRead;
-            bytesRead = 0;
         } else {
             // must be a directory
             char * path = calloc(pathLen + 1, sizeof(char));
             strcpy(path, (*myTar) -> name);
-
             // remove last '/'
             if (path[pathLen - 1] ==  '/'){
                 path[pathLen - 1] = 0;
             }
             if (mkdir(path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) < 0){
-                fprintf(stderr, "Failed creating directory%d\n", errno);
+                fprintf(stderr, "Failed creating directory. Error: %d\n", errno);
                 return -1;
             }
-            sizeOfTar -= bytesRead;
-            bytesRead = 0;
+            blocksToRead--; //decrement the amount we need to still read
         }
     }
     return 0;
@@ -162,14 +134,14 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
         int rtn1 = tStatFile(*myTar, files[i]);
         if(rtn1 < 0){
             perror("Stat Error");
-            return -1;
+            continue;
         }
         // meta data writing part goes here
         int metaRtn;
 
         metaRtn = fwrite((*myTar), sizeof(struct t_header), 1, fd);
         if(metaRtn < 0){
-            fprintf(stderr, "Error: Failed to write metadata\n");
+            perror("Error writing in file");
             return -1;
         }
 
@@ -204,16 +176,14 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
                 } else {
                     char * myPath = malloc(len + strlen(ep -> d_name));
                     sprintf(myPath, "%s/%s", (*myTar) -> name, ep -> d_name);
-
-                    // recursively write each subdirectory
                     struct t_header ** next = malloc(sizeof(struct t_header));
                     int rtn2 = tWrite(fd, next, arc, 1, (const char **) &myPath);
                     if (rtn2 < 0){
-                        printf("Error: unable to write data\n");
+                        perror("Error writing in file");
                     }
                 }
             }
-        closedir(dp);
+            closedir(dp);
         } else {
             if (((*myTar) -> typeflag == REGTYPE) || ((*myTar) -> typeflag == AREGTYPE) ||
             ((*myTar) -> typeflag == SYMTYPE)){
@@ -231,10 +201,11 @@ int tWrite(FILE * fd, struct t_header ** top, struct t_header ** arc,
                     tmp ++;
                     writeCount = fwrite(buff, 1, rCount, fd);
                     if(writeCount <= 0){
-                        perror("Error: writting");
+                        perror("Error: writing");
                     }
                     rCount = fread(buff, sizeof(char), 512, fdR);
                 }
+                fclose(fdR);
             }
 
             // pad the left over size to fill the block
@@ -293,20 +264,13 @@ int tStatFile(struct t_header * header, const char * filename){
     }
     char mode[8];
     memset(mode, 0, sizeof(char) * 8);
-
-    strcat(mode, ((fileStat.st_mode & S_IRUSR) ? "r" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IWUSR) ? "w" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IXUSR) ? "x" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IRGRP) ? "r" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IWGRP) ? "w" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IXGRP) ? "x" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IROTH) ? "r" : "-"));
-    strcat(mode, ((fileStat.st_mode & S_IWOTH) ? "w" : "-"));
-    //strcat(mode, ((fileStat.st_mode & S_IXOTH) ? "x" : "-"));
+    sprintf(header -> mode, "%07o", fileStat.st_mode);
+    sprintf(header -> uid, "%07o", fileStat.st_uid);
+    sprintf(header -> gid, "%07o", fileStat.st_gid);
+    sprintf(header -> size, "%011o", (int) fileStat.st_size);
 
     // put name and mode in header
     strcpy(header -> name, filename);
-    strcpy(header -> mode, mode);
 
     // modified time saved to header
     unsigned int  timeInt = fileStat.st_mtime;
@@ -314,7 +278,7 @@ int tStatFile(struct t_header * header, const char * filename){
     sprintf(mTimebuf, "%u", timeInt);
     strcpy(header -> mtime, mTimebuf);
 
-    // get uid and save to header
+    // get uname and save to header
     struct passwd pwd;
     struct passwd *result;
     char *buf;
@@ -325,16 +289,12 @@ int tStatFile(struct t_header * header, const char * filename){
     sprintf(uidBuff, "%ld", (long)pwd.pw_uid);
     strcpy(header -> uid, uidBuff);
 
-    // get gid and save to header
+    // get gname and save to header
     char gidBuff[32];
-    struct group *gr;
-    gr = malloc(182);
-    struct group *groupR;
-    getgrnam_r(filename, gr, buf, bufSize, &groupR);
+    struct group *gr = getgrgid(fileStat.st_gid);
     sprintf(gidBuff, "%ld", (long)gr->gr_gid);
-    strcpy(header -> gid, gidBuff);
+    strcpy(header -> gname, gr -> gr_name);
 
-    free(gr);
     free(buf);
 
     // get file type and save to header
@@ -344,16 +304,13 @@ int tStatFile(struct t_header * header, const char * filename){
     } else if(S_ISLNK(fileStat.st_mode) != 0) {
         // link so we dont put a size just leave as zeros
         header -> typeflag = SYMTYPE;
+        strcpy( header -> size,  "00000000000");
+        readlink(filename, header -> linkname, 100);
     } else {
         // not a dir or link
         header -> typeflag = REGTYPE;
     }
 
-    // put size in the header
-    int mySize = (int) fileStat.st_size;
-    char sizeBuf[12];
-    sprintf(sizeBuf, "%d", mySize);
-    strcpy(header -> size, sizeBuf);
 
     // TODO: compute checksum here and put in header
     unsigned int checksum = 0;

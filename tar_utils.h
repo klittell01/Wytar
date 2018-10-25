@@ -28,6 +28,7 @@
 #define AREGTYPE '\0'                 // regular file
 #define SYMTYPE '2'                   // symbolic link
 #define DIRTYPE '5'
+#define TMAGIC "ustar"
 
 
 struct t_header {               // byte offset //

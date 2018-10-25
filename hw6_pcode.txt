@@ -6,10 +6,12 @@
 
 
 check for options
- if it is c 
+ if it is c
    create archive using the filename after option f
+     if no f option: error
  else if it is x
    extract archive specified by filename option
+      if no f option: error
  else
    options are wrong
 
@@ -20,4 +22,3 @@ archive
 
 extract
   get data from archive and write it to files and directories
-
